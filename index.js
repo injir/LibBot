@@ -154,10 +154,8 @@ tg.for('/page :page', () => {
      });
 
      tg.for('/search', () => {
-
-		$.sendMessage(config.message['SearchController']['search'].message);
-		 		
-		$.waitForRequest(($) => {
+		lib.SendMessageWithHideKeyboard($.user.id,config.message['SearchController']['search'].message,()=>{
+					$.waitForRequest(($) => {
 				if($.message.text[0] == '/'){
 					$.routeTo($.message.text);
 				}
@@ -165,6 +163,11 @@ tg.for('/page :page', () => {
             		$.routeTo('/search '+$.message.text);
             	}
 		   }) 	
+
+		});
+		//$.sendMessage(config.message['SearchController']['search'].message);
+		 		
+	
 
 
      });

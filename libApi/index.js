@@ -63,14 +63,19 @@ class LibBot{
 		this.getData(url, function(result,err){
 	     			if(!err)
 	     			{
-	     				
-	     				lib.isSearchResultShow = false;
-	     				
-	     				lib.UserInfo[obj.user.id] ={result: result, msg: 0, keyboard: 0, date:0};
-	     				setTimeout(function(){
-	     						lib.searchDataPage(obj,1,result);
 
-	     				},1000);
+	     				if(!(obj.user.id in lib.UserInfo)){
+	     					lib.UserInfo[obj.user.id] = {page:0};
+	     				}
+	     				lib.showSearchResult(obj,result);
+	     				
+	     				// lib.isSearchResultShow = false;
+	     				
+	     				 //lib.UserInfo[obj.user.id] ={result: result, msg: 0, keyboard: 0, date:0};
+	     				// setTimeout(function(){
+	     				// 		lib.searchDataPage(obj,1,result);
+
+	     				// },1000);
 					
 						
 
@@ -100,8 +105,7 @@ class LibBot{
 	//------------------------------------------
 
 	//Метод осуществляет постраничный вывод статей
-	 searchDataPage(obj,page,result){ 		
-	 console.log(page); 		
+	 searchDataPage(obj,page,result){ 			
 				if(result){	
 					var lib = this;
      				var quantity = config.articleQuantity; // количество статей на странице
@@ -288,7 +292,7 @@ class LibBot{
 	}
 //------------------------------------------
  //Метод отправляет сообщение и скрывает клавиатуру
-	  SendMessageWithHideKeyboard(chatid,msg,callback){
+	 SendMessageWithHideKeyboard(chatid,msg,callback){
 
 		var option = JSON.stringify({hide_keyboard:true});
 		var url = 'https://api.telegram.org/bot'+config.token+'/sendMessage?text='+encodeURI(msg)+'&chat_id='+chatid+'&reply_markup='+option;
@@ -308,7 +312,36 @@ class LibBot{
 			}
 		}
 	}
-	
+
+	showSearchResult(obj,result){
+		
+		var currentPage = this.UserInfo[obj.user.id].page;
+		console.log(currentPage);
+		var itemQuantity = config.articleQuantity;
+		var articles = result;
+		var currentIndex = currentPage*itemQuantity;
+		var lastIndex = currentIndex+itemQuantity;
+		console.log(currentIndex,lastIndex );
+		var menu = {
+			'в меню':()=>{obj.routeTo("/menu")}
+		};
+		
+		if(lastIndex>=articles.length){
+			lastIndex = articles.length;
+		}
+		else{
+			menu['еще'] = ()=>{obj.routeTo(obj.message.text)};
+		}
+			var msg ='';	
+	 	 for(var i = currentIndex; i < lastIndex; i++){
+ 			msg +='\n'+articles[i].name+'\n'+ articles[i].link;
+ 		 }	
+ 		 menu['message'] = msg;
+ 		 menu['layout'] = 1;
+ 		 obj.runMenu(menu); 
+ 		 this.UserInfo[obj.user.id].page = currentPage+1;
+	}
+
 }
 
 
