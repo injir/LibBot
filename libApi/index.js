@@ -42,13 +42,18 @@ class LibBot{
 
 	//метод выводит статьи в разделе категорий
 	categoryData(obj, url){
-
+		var lib = this;
 			this.getData(url,(result,err)=>{
 		 		if(!err){
-			 			this.isSearchResultShow = false;
-						//this.searchResult = result;
-						this.UserInfo[obj.user.id] ={result: result, msg: 0, keyboard: 0, date:0};
-						this.searchDataPage(obj,1,result);
+			 		if(!(obj.user.id in lib.UserInfo)){
+	     					lib.UserInfo[obj.user.id] = {page:0};
+	     				}
+	     				lib.showSearchResult(obj,result);
+
+			 		// 	this.isSearchResultShow = false;
+						// //this.searchResult = result;
+						// this.UserInfo[obj.user.id] ={result: result, msg: 0, keyboard: 0, date:0};
+						// this.searchDataPage(obj,1,result);
 						
 
 			 			}
