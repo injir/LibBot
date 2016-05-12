@@ -1,15 +1,14 @@
 'use strict'
 
 var Config = {
-	//token:'188012702:AAFqG-kcggesMuNmh5ISPg9zaBTk6-wIo9I',
-	token: '209322536:AAFU9LFlijkijXAbYCPcWDaTLLBUjHXfBLE',
-	articleQuantity:7,
+	token:'188012702:AAFqG-kcggesMuNmh5ISPg9zaBTk6-wIo9I', //lib_bot
+	//token: '209322536:AAFU9LFlijkijXAbYCPcWDaTLLBUjHXfBLE', 
 	menu:{
 	1: 'Работодателям',
 	2: 'Соискателям',
-	3: 'Общие вопросы по работе с сайтом',	
+	3: 'Общие вопросы',	
 	},
-
+	articleQuantity:7,
 		message:{
 			'StartController':{
 				'start': {

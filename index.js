@@ -9,11 +9,12 @@ var tg = require('telegram-node-bot')(token);
 
 tg.router.
     when(['/start'], 'StartController').
+    when(['/search :text'], 'SearchController').
     when(['/menu'], 'MenuController').
     when(['/restart'], 'StartController').
     when(['/help'], 'StartController').
-    when(['/search :text'], 'SearchController').
-    when(['/search :text :page'], 'SearchController').
+
+    //when(['/search :text :page'], 'SearchController').
     when(['/category :category' ], 'SearchController').
     when(['/employers' ], 'SearchController').
     when(['/applicants' ], 'SearchController').
@@ -22,12 +23,13 @@ tg.router.
      when(['/test'], 'MenuController').
     when(['/page :page'], 'SearchController').
    	when(['/search'], 'SearchController').
+   	when(['/more :text'], 'SearchController').
     otherwise('OtherwiseController');
 
 //--------------------------OtherwiseController-----------------------// 
 tg.controller('OtherwiseController', ($) => {   
-	if(lib.UserInfo[$.user.id]){
-		delete lib.UserInfo[$.user.id];
+	if($.user.id in lib.UserInfo){
+		lib.deleteUserInfo($);
 	}
 
  	$.sendMessage("Бот вас не понял, воспользуйтесь командами или пунктами меню");
@@ -49,9 +51,8 @@ var data = JSON.parse($.data);
 	}
 	}
 	else{
-			if(lib.UserInfo[$.from.id]){
-			delete lib.UserInfo[$.from.id];
-		}
+		lib.clearUserInfo();
+		lib.deleteUserInfo($);
 	}
 })
 
@@ -124,8 +125,25 @@ tg.for('/page :page', () => {
 
 //--------------------------/search :text-----------------------// 
     tg.for('/search :text', () => {
+    		//lib.deleteUserInfo($);
+    		//lib.isSearchResultShow = false;
+   			var text = decodeURI($.query.text);
+   			
+     		var url = "http://hh.indo.tech:88/search?text="+encodeURI(text);
+     		 lib.searchData($, url, null);
+     		$.waitForRequest(($) => {
+				if($.message.text[0] == '/'){
+					$.routeTo($.message.text);
+				}
+				else{
+            		$.routeTo('/search '+encodeURI($.message.text));
+            	}
+		   }) 
 
-    		lib.isSearchResultShow = false;
+    });
+//--------------------------------------------
+	tg.for('/more :text', () => {
+
    			var text = $.query.text;
      		var url = "http://hh.indo.tech:88/search?text="+encodeURI(text);
      		 lib.searchData($, url, null);
@@ -134,17 +152,15 @@ tg.for('/page :page', () => {
 					$.routeTo($.message.text);
 				}
 				else{
-            		$.routeTo('/search '+$.message.text);
+            		$.routeTo('/search '+encodeURI($.message.text));
             	}
 		   }) 
 
     });
-//--------------------------------------------
-
 
 //--------------------------/search :text :category-----------------------// 
      tg.for('/search :text :category', () => {
-     	
+     		//lib.deleteUserInfo($);
      		//------------------
      		var text = $.query.text;
      		var category = $.query.category;
@@ -154,13 +170,19 @@ tg.for('/page :page', () => {
      });
 
      tg.for('/search', () => {
+     	if($.args !== ''){
+     		
+     		$.routeTo('/search '+encodeURI($.args));
+     		return;
+     	}
 		lib.SendMessageWithHideKeyboard($.user.id,config.message['SearchController']['search'].message,()=>{
 					$.waitForRequest(($) => {
+				
 				if($.message.text[0] == '/'){
 					$.routeTo($.message.text);
 				}
 				else{
-            		$.routeTo('/search '+$.message.text);
+            		$.routeTo('/search '+encodeURI($.message.text));
             	}
 		   }) 	
 
@@ -197,7 +219,8 @@ tg.for('/page :page', () => {
 
 tg.controller('StartController', ($) => {
 	var btn = config.message['StartController']['start'].button;
-    tg.for('/start', () => {
+	lib.clearUserInfo();
+    tg.for('/start', () => {	
 		    $.runMenu({
 			    message: config.message['StartController']['start'].message,
 			    layout: 2,
@@ -207,10 +230,12 @@ tg.controller('StartController', ($) => {
 
     });
      tg.for('/restart', () => {
+     	 lib.deleteUserInfo($);
 		 $.routeTo('/start');
     });
 
       tg.for('/help', () => {
+      		lib.deleteUserInfo($);
 	      	var msg = config.message['StartController']['help'].message;	 
 			$.sendMessage(msg);
 
@@ -219,7 +244,13 @@ tg.controller('StartController', ($) => {
 
 tg.controller('MenuController', ($) => { 
     tg.for('/menu', () => {
+    	lib.deleteUserInfo($);
     	var result = {
+    	layout: 1,
+    	 options: {
+        	resize_keyboard: false,
+   		 },
+    	
 		message: config.message['MenuController']['menu'].message,
 		options: {
         parse_mode: 'Markdown' // in options field you can pass some additional data, like parse_mode
