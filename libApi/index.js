@@ -6,6 +6,7 @@ class LibBot{
 
 	constructor() {
         this.searchResult={};
+        this.isMoreArticle=false;
 		this.MessageId=0;
 		this.KeyboardId=0;
 		this.isSearchResultShow = false;
@@ -15,7 +16,7 @@ class LibBot{
 
 	//Метод возвращает JSON со статьями
 	getData(url,callback){
-		
+	  this.clearUserInfo();
 	  new Promise(function(resolve, rejected){
 	 			request({				  
 					    url: url,
@@ -48,8 +49,8 @@ class LibBot{
 			 		if(!(obj.user.id in lib.UserInfo)){
 	     					lib.UserInfo[obj.user.id] = {page:0};
 	     				}
-	     				lib.showSearchResult(obj,result);
-
+	     				lib.showSearchResult(obj,result,obj.message.text);
+						
 			 		// 	this.isSearchResultShow = false;
 						// //this.searchResult = result;
 						// this.UserInfo[obj.user.id] ={result: result, msg: 0, keyboard: 0, date:0};
@@ -63,17 +64,19 @@ class LibBot{
 
 	//Метод выводит результаты поиска
  	searchData(obj, url, category){
+ 		this.clearUserInfo();
  		var lib = this;
  		var btn = config.message['SearchController']['error'].button;
 		this.getData(url, function(result,err){
 	     			if(!err)
 	     			{
-
+	     				
 	     				if(!(obj.user.id in lib.UserInfo)){
 	     					lib.UserInfo[obj.user.id] = {page:0};
+	     					lib.UserInfo[obj.user.id].date = Date.now();
 	     				}
-	     				lib.showSearchResult(obj,result);
-	     				
+	     				//lib.showSearchResult(obj,result,'/more '+obj.query.text);
+	     				lib.showSearchResult(obj,result,obj.message.text);	
 	     				// lib.isSearchResultShow = false;
 	     				
 	     				 //lib.UserInfo[obj.user.id] ={result: result, msg: 0, keyboard: 0, date:0};
@@ -86,23 +89,42 @@ class LibBot{
 
 	     			}
 	     			else{
-	     				delete lib.UserInfo[obj.user.id];
-	 					obj.runMenu({
+	     				lib.deleteUserInfo(obj);
+	     				var msg = 'К сожалению по запросу "'+decodeURI(obj.query.text)+'" ничего не найдено. База знаний формируется и в ней ещё нет '+
+	     				'всей информации. Вам могут помочь сотрудники техподдержки. Соединить со специалистом?';
 
-						     message: config.message['SearchController']['error'].message,
-						     layout: 1,
-						    [btn[1]]: () => {obj.routeTo("/support")}, //will be on first line
-						    [btn[2]]: () => {obj.routeTo("/menu")},
-						    anyMatch: ($) => { 
-								if($.message.text[0] == '/'){
-									$.routeTo($.message.text);
-								}
-								else{
-									$.routeTo('/search '+encodeURI($.message.text));
-								}
-	   		 				}
+	 				// 	obj.runMenu({
+
+						//      //message: config.message['SearchController']['error'].message,
+
+						//      message: 'К сожалению по запросу "'+decodeURI(obj.query.text)+'" ничего не найдено. База знаний формируется и в ней ещё нет всей информации. Вам могут помочь сотрудники техподдержки. Соединить со специалистом?',
+						//      layout: 1,
+						//     [btn[1]]: () => {obj.routeTo("/support")}, //will be on first line
+						//     [btn[2]]: () => {obj.routeTo("/menu")},
+						//     anyMatch: ($) => { 
+						// 		if($.message.text[0] == '/'){
+						// 			$.routeTo($.message.text);
+						// 		}
+						// 		else{
+						// 			$.routeTo('/search '+encodeURI($.message.text));
+						// 		}
+	   		//  				}
 					  
-						})		
+						// })	
+
+						obj.runInlineMenu('sendMessage', msg, {}, [
+							    {
+							        text: 'Да',
+							        url: 'https://telegram.me/hh_ru_bot',
+							        
+							    },
+							    {
+							        text: 'Нет',						     
+							        callback: ($) => {
+							           obj.routeTo("/menu");
+							        }
+							    }
+							], [2]);	
 	     			}	
 	     		});
 
@@ -309,46 +331,87 @@ class LibBot{
 			  });
 	}
 //------------------------------------------
-	clearSearchResult(){
-		for(var item in UserInfo){
-			console.log(Date.now()-item.date);
-			if(Date.now()-item.date>1){
 
-			}
-		}
-	}
-
-	showSearchResult(obj,result){
+	showSearchResult(obj,result, route){
 		
-		var currentPage = this.UserInfo[obj.user.id].page;
-		console.log(currentPage);
+		var currentPage = this.UserInfo[obj.user.id].page;	
 		var itemQuantity = config.articleQuantity;
 		var articles = result;
 		var currentIndex = currentPage*itemQuantity;
 		var lastIndex = currentIndex+itemQuantity;
-		console.log(currentIndex,lastIndex );
 		var menu = {
-			'в меню':()=>{obj.routeTo("/menu")}
+			'в меню':()=>{obj.routeTo("/menu")},
+			layout: 2,
+			resize_keyboard: true,
+			options: {
+        		parse_mode: 'Markdown', 
+        		
+    		},
+			'anyMatch': ($) => { 
+				this.deleteUserInfo(obj);
+				if($.message.text[0] == '/'){
+						obj.routeTo($.message.text);
+					}
+					else{
+	            		obj.routeTo('/search '+$.message.text);
+	            	}
+   		 	}	
 		};
 		
 		if(lastIndex>=articles.length){
 			lastIndex = articles.length;
 		}
 		else{
-			menu['еще'] = ()=>{obj.routeTo(obj.message.text)};
+			menu['Еще статей'] = ()=>{obj.routeTo(route)};
 		}
-			var msg ='';	
+		var msg ='';	
 	 	 for(var i = currentIndex; i < lastIndex; i++){
- 			msg +='\n'+articles[i].name+'\n'+ articles[i].link;
- 		 }	
- 		 menu['message'] = msg;
- 		 menu['layout'] = 1;
- 		 obj.runMenu(menu); 
+ 			//msg +='<h2><a href="'+articles[i].link+'">'+articles[i].name+'</a></h2>';
+ 			msg +='\n\n['+articles[i].name+']('+articles[i].link+')';
+ 			
+ 		 }
+			 menu['message'] = msg;
+
+ 		 if(currentPage==0){
+ 		 	var text;
+ 		 	if(obj.query.text){
+ 		 		text = '"'+decodeURI(obj.query.text)+'"';
+ 		 	}
+ 		 	else{
+ 		 		text = obj.query.command;
+ 		 	}
+			obj.sendMessage('По запросу '+text+' найдено: '+ result.length, ($)=>{
+				 obj.runMenu(menu);
+			});
+		}
+		else{
+			 obj.runMenu(menu);
+		} 
  		 this.UserInfo[obj.user.id].page = currentPage+1;
+
+
+		
+		
+ 		
 	}
 
+	deleteUserInfo(obj){
+	if(obj.user.id in this.UserInfo){
+		delete  this.UserInfo[obj.user.id];
+	}
 }
 
+  clearUserInfo(){
+		for(var obj in this.UserInfo){
+			var result =Date.now()-this.UserInfo[obj].date;
+			
+			if(result > (1800*1000)){
+
+				delete this.UserInfo[obj];
+			}
+		}
+	}
+}
 
 module.exports = function () {
     return new LibBot();
